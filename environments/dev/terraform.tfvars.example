@@ -19,7 +19,7 @@ db_name              = "fooddelivery"
 db_username          = "fooddelivery"
 db_instance_class    = "db.t4g.micro"
 db_allocated_storage = 20
-postgres_version     = "16.3"
+postgres_version     = "16"
 
 # ECS Fargate
 task_cpu       = 256
