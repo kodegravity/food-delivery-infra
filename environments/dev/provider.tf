@@ -12,15 +12,19 @@ terraform {
     }
   }
 
-  # S3 remote backend — bucket, region, and dynamodb_table are injected at init time via
-  # -backend-config flags (see the GitHub Actions workflow and bootstrap section below).
+  # S3 remote backend — bucket and dynamodb_table are injected at init time via
+  # -backend-config flags (see the GitHub Actions workflow).
+  # Note: we use 'skip_region_validation = true' because the S3 backend validates
+  # the region before applying -backend-config flags, which causes issues in CI/CD.
   backend "s3" {
-    key     = "food-delivery/dev/terraform.tfstate"
-    encrypt = true
-    region  = "us-east-2"
-    # bucket and dynamodb_table are passed via -backend-config at runtime:
+    key                      = "food-delivery/dev/terraform.tfstate"
+    encrypt                  = true
+    skip_region_validation   = true
+    skip_credentials_validation = true
+    # These are passed via -backend-config at runtime:
     #   terraform init \
     #     -backend-config="bucket=food-delivery-terraform-state-<account_id>" \
+    #     -backend-config="region=us-east-2" \
     #     -backend-config="dynamodb_table=food-delivery-terraform-locks"
   }
 }
