@@ -17,14 +17,11 @@ terraform {
   backend "s3" {
     key     = "food-delivery/dev/terraform.tfstate"
     encrypt = true
-    # These are passed via -backend-config at runtime:
+    region  = "us-east-2"
+    # bucket and dynamodb_table are passed via -backend-config at runtime:
     #   terraform init \
     #     -backend-config="bucket=food-delivery-terraform-state-<account_id>" \
-    #     -backend-config="region=us-east-2" \
     #     -backend-config="dynamodb_table=food-delivery-terraform-locks"
-    #
-    # The backend block intentionally omits bucket, region, and dynamodb_table
-    # so they can be provided dynamically (useful for local and CI/CD workflows).
   }
 }
 
