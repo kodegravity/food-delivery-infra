@@ -12,17 +12,13 @@ terraform {
     }
   }
 
-  # Local backend for now — state is stored in .terraform/terraform.tfstate
-  # To migrate to S3 backend later, uncomment the backend "s3" block below
-  # and run: terraform init -migrate-state
-  #
-  # backend "s3" {
-  #   key                      = "food-delivery/dev/terraform.tfstate"
-  #   encrypt                  = true
-  #   skip_region_validation   = true
-  #   skip_credentials_validation = true
-  #   # bucket, region, dynamodb_table passed via -backend-config at init time
-  # }
+  backend "s3" {
+    key                      = "food-delivery/dev/terraform.tfstate"
+    encrypt                  = true
+    skip_region_validation   = false
+    skip_credentials_validation = false
+    # bucket, region, dynamodb_table passed via -backend-config at init time
+  }
 }
 
 provider "aws" {
