@@ -2,6 +2,8 @@
 *.tfstate
 *.tfstate.*
 *.tfstate.backup
+.terraform.tfstate
+.terraform.tfstate.backup
 
 # Variable files with real values — use *.example files instead
 terraform.tfvars
