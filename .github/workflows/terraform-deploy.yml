@@ -1,0 +1,135 @@
+name: Terraform Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Terraform action to run"
+        type: choice
+        required: true
+        options:
+          - plan
+          - apply
+          - destroy
+        default: plan
+
+      environment:
+        description: "Target environment"
+        type: choice
+        required: true
+        options:
+          - dev
+        default: dev
+
+      confirm_destroy:
+        description: "Type DESTROY to confirm — only required when action = destroy"
+        type: string
+        required: false
+        default: ""
+
+# Only allow one deployment at a time per environment to prevent state conflicts
+concurrency:
+  group: terraform-${{ github.event.inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  terraform:
+    name: "${{ github.event.inputs.action }} → ${{ github.event.inputs.environment }}"
+    runs-on: ubuntu-latest
+
+    # Use a GitHub Environment for deployment tracking and optional protection rules.
+    # Create a 'dev' environment at:  Settings → Environments → New environment
+    environment: ${{ github.event.inputs.environment }}
+
+    defaults:
+      run:
+        working-directory: environments/${{ github.event.inputs.environment }}
+
+    steps:
+      # ── Validate destroy confirmation ────────────────────────────────────────
+      - name: Validate destroy confirmation
+        if: github.event.inputs.action == 'destroy'
+        run: |
+          if [ "${{ github.event.inputs.confirm_destroy }}" != "DESTROY" ]; then
+            echo "::error::Destroy action requires confirm_destroy = 'DESTROY'. Got: '${{ github.event.inputs.confirm_destroy }}'"
+            exit 1
+          fi
+          echo "::warning::DESTROY confirmed — all infrastructure in '${{ github.event.inputs.environment }}' will be deleted."
+
+      # ── Checkout ─────────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── AWS credentials ──────────────────────────────────────────────────────
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ vars.AWS_REGION || 'ca-central-1' }}
+
+      # ── Terraform setup ──────────────────────────────────────────────────────
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+
+      # ── Init (with S3 backend) ───────────────────────────────────────────────
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="region=${{ vars.AWS_REGION || 'ca-central-1' }}" \
+            -backend-config="dynamodb_table=${{ vars.TF_STATE_DYNAMODB_TABLE }}"
+
+      # ── Validate ─────────────────────────────────────────────────────────────
+      - name: Terraform Validate
+        run: terraform validate
+
+      # ── Plan (always runs — gives visibility even for apply/destroy) ─────────
+      - name: Terraform Plan
+        id: plan
+        run: |
+          if [ "${{ github.event.inputs.action }}" == "destroy" ]; then
+            terraform plan -destroy -out=tfplan -no-color 2>&1 | tee plan_output.txt
+          else
+            terraform plan -out=tfplan -no-color 2>&1 | tee plan_output.txt
+          fi
+          echo "exit_code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+
+      # ── Upload plan file as artifact ─────────────────────────────────────────
+      - name: Upload plan artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-${{ github.event.inputs.environment }}-${{ github.run_id }}
+          path: environments/${{ github.event.inputs.environment }}/tfplan
+          retention-days: 5
+
+      # ── Post plan summary to workflow run ────────────────────────────────────
+      - name: Post plan summary
+        if: always()
+        run: |
+          echo "## Terraform Plan — \`${{ github.event.inputs.environment }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          tail -50 plan_output.txt >> $GITHUB_STEP_SUMMARY || true
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+      # ── Apply ────────────────────────────────────────────────────────────────
+      - name: Terraform Apply
+        if: github.event.inputs.action == 'apply'
+        run: terraform apply -auto-approve tfplan
+
+      # ── Destroy ──────────────────────────────────────────────────────────────
+      - name: Terraform Destroy
+        if: github.event.inputs.action == 'destroy'
+        run: terraform apply -auto-approve tfplan
+
+      # ── Print outputs after apply ─────────────────────────────────────────────
+      - name: Terraform Output
+        if: github.event.inputs.action == 'apply'
+        run: |
+          echo "## Deployment Outputs — \`${{ github.event.inputs.environment }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          terraform output >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

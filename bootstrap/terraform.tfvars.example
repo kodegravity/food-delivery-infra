@@ -1,0 +1,7 @@
+aws_region          = "ca-central-1"
+project             = "food-delivery"
+# IMPORTANT: S3 bucket names are globally unique across all AWS accounts.
+# Replace YOUR_ACCOUNT_ID with your actual 12-digit AWS account ID.
+# Run: aws sts get-caller-identity --query Account --output text
+state_bucket_name   = "food-delivery-terraform-state-YOUR_ACCOUNT_ID"
+dynamodb_table_name = "food-delivery-terraform-locks"
