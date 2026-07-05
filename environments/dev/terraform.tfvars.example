@@ -1,7 +1,7 @@
 # Copy this file to terraform.tfvars and adjust values as needed.
 # Never commit terraform.tfvars to source control — it may contain sensitive data.
 
-aws_region  = "ca-central-1"
+aws_region  = "us-east-2"
 project     = "food-delivery"
 environment = "dev"
 
@@ -9,7 +9,7 @@ environment = "dev"
 vpc_cidr             = "10.0.0.0/16"
 public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24"]
 private_subnet_cidrs = ["10.0.10.0/24", "10.0.20.0/24"]
-availability_zones   = ["ca-central-1a", "ca-central-1b"]
+availability_zones   = ["us-east-2a", "us-east-2b"]
 
 # ECR / services
 service_names = ["api-gateway", "user-service", "restaurant-service", "order-service"]

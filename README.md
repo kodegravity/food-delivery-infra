@@ -111,9 +111,9 @@ terraform apply
 After a successful apply, key outputs are printed:
 
 ```
-alb_dns_name         = "http://food-delivery-dev-alb-XXXXX.ca-central-1.elb.amazonaws.com"
+alb_dns_name         = "http://food-delivery-dev-alb-XXXXX.us-east-2.elb.amazonaws.com"
 ecr_repository_urls  = { "api-gateway" = "...", "user-service" = "...", ... }
-rds_endpoint         = "food-delivery-dev-postgres.XXXX.ca-central-1.rds.amazonaws.com:5432"
+rds_endpoint         = "food-delivery-dev-postgres.XXXX.us-east-2.rds.amazonaws.com:5432"
 ecs_cluster_name     = "food-delivery-dev"
 ```
 
@@ -128,9 +128,9 @@ ecs_cluster_name     = "food-delivery-dev"
 terraform output -raw ecr_login_command | bash
 
 # Or manually:
-aws ecr get-login-password --region ca-central-1 \
+aws ecr get-login-password --region us-east-2 \
   | docker login --username AWS --password-stdin \
-    <account-id>.dkr.ecr.ca-central-1.amazonaws.com
+    <account-id>.dkr.ecr.us-east-2.amazonaws.com
 ```
 
 ### Build and push an image
@@ -138,7 +138,7 @@ aws ecr get-login-password --region ca-central-1 \
 ```bash
 # Set variables
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-REGION=ca-central-1
+REGION=us-east-2
 SERVICE=user-service   # one of: api-gateway, user-service, restaurant-service, order-service
 REPO="${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/food-delivery/${SERVICE}"
 
@@ -167,7 +167,7 @@ After pushing a new image, force a new deployment so ECS pulls the latest tag:
 
 ```bash
 CLUSTER=food-delivery-dev
-REGION=ca-central-1
+REGION=us-east-2
 
 # Update a single service
 aws ecs update-service \
@@ -192,7 +192,7 @@ done
 aws ecs describe-services \
   --cluster food-delivery-dev \
   --services food-delivery-dev-api-gateway \
-  --region ca-central-1 \
+  --region us-east-2 \
   --query "services[0].{Status:status,Running:runningCount,Desired:desiredCount}"
 ```
 
@@ -202,11 +202,11 @@ aws ecs describe-services \
 
 ```bash
 # Stream logs for a service
-aws logs tail /ecs/food-delivery/dev/user-service --follow --region ca-central-1
+aws logs tail /ecs/food-delivery/dev/user-service --follow --region us-east-2
 
 # Query last 100 lines
 aws logs tail /ecs/food-delivery/dev/order-service \
-  --since 1h --region ca-central-1
+  --since 1h --region us-east-2
 ```
 
 ---
@@ -220,7 +220,7 @@ aws secretsmanager get-secret-value \
   --secret-id food-delivery/dev/db/credentials \
   --query SecretString \
   --output text \
-  --region ca-central-1 | python3 -m json.tool
+  --region us-east-2 | python3 -m json.tool
 ```
 
 ---

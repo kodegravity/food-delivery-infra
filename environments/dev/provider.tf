@@ -22,7 +22,7 @@ terraform {
     # when running locally:
     #   terraform init \
     #     -backend-config="bucket=food-delivery-terraform-state-<account_id>" \
-    #     -backend-config="region=ca-central-1" \
+    #     -backend-config="region=us-east-2" \
     #     -backend-config="dynamodb_table=food-delivery-terraform-locks"
   }
 }
